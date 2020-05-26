@@ -106,6 +106,11 @@ class ConfigExtractor(object):
         if "via.features" in via_params:
             template_params["via_features"] = via_params["via.features"].split(",")
 
+        external_link_mode = via_params.get("via.external_link_mode")
+        if external_link_mode not in ["same-tab", "new-tab"]:
+            external_link_mode = "same-tab"
+        template_params["external_link_mode"] = external_link_mode
+
         environ["pywb.template_params"] = template_params
 
         # A wrapper which intercepts redirects and adds any params from `via_params`

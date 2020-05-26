@@ -109,8 +109,27 @@ class TestConfigExtractor(object):
                     "ancestorLevel": "3",
                 },
                 "showHighlights": True,
-            }
+            },
+            "external_link_mode": "same-tab",
         }
+
+    @pytest.mark.parametrize(
+        "query_param_value,expected_mode",
+        [
+            ("", "same-tab"),
+            ("same-tab", "same-tab"),
+            ("new-tab", "new-tab"),
+            ("invalid", "same-tab"),
+        ],
+    )
+    def test_it_sets_external_link_mode_template_param(
+        self, client_get, query_param_value, expected_mode
+    ):
+        resp = client_get(
+            "/example.com?q=foobar&via.external_link_mode=" + query_param_value
+        )
+        template_params = json.loads(resp.data).get("pywb.template_params")
+        assert template_params["external_link_mode"] == expected_mode
 
     def test_it_sets_via_features_template_param(self, client_get):
         resp = client_get("/example.com?q=foobar&" "via.features=feature_a,feature_b")

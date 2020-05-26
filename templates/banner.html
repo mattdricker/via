@@ -42,6 +42,56 @@ function isTopViaFrame() {
   }
 }
 
+function stripFragment(url) {
+  return url.replace(/#.*$/, '');
+}
+
+/**
+ * Test if a link will navigate to a new page as opposed to scrolling to a
+ * different location within the current page.
+ *
+ * @param {HTMLAnchorElement} linkEl
+ */
+function isExternalLink(linkEl) {
+  // Create a link that is definitely internal and compare its absolute URL
+  // to the target link.
+  //
+  // We do this rather than the more obvious comparison of `linkEl.href` to `location.href`
+  // because Via monkey-patches `HTMLAnchorElement.prototype.href` so that it
+  // returns the original (non-proxied) URL and therefore cannot be
+  // compared directly with the real (proxied) URL that `location.href` returns.
+  const internalLink = document.createElement('a');
+
+  // nb. `href` always returns an absolute URL when read.
+  internalLink.href = '#';
+
+  return stripFragment(internalLink.href) !== stripFragment(linkEl.href);
+}
+
+/**
+ * Setup handling of links to other documents.
+ *
+ * @param {"same-tab"|"new-tab"} mode
+ */
+function setupExternalLinkHandler(mode) {
+  if (mode === "new-tab") {
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest) {
+        // Do nothing in browsers that don't support `element.closest` (IE 11).
+        return;
+      }
+
+      var linkEl = event.target.closest("a");
+      if (linkEl) {
+        if (isExternalLink(linkEl)) {
+          // Make link open in a new tab.
+          linkEl.target = "_blank";
+        }
+      }
+    });
+  }
+}
+
 (function () {
 
 if (!isTopViaFrame()) {
@@ -55,9 +105,12 @@ if (!isTopViaFrame()) {
   return;
 }
 
+// Inject the Hypothesis client.
 var embed_script = document.createElement("script");
 embed_script.src = "{{ h_embed_url }}";
 document.head.appendChild(embed_script);
+
+setupExternalLinkHandler("{{ external_link_mode }}");
 
 {% include "client_config.js.jinja2" %}
 })();
