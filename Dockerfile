@@ -1,9 +1,7 @@
-FROM alpine:3.11.6
+FROM alpine:3.12.0
 MAINTAINER Hypothes.is Project and Ilya Kreymer
 
 # Install runtime deps.
-# nb. py2-pip is installed as a runtime dependency because it includes the
-# `pkg_resources` module via the `setuptools` package which Via depends on.
 RUN apk add --update \
     git \
     collectd \
@@ -11,11 +9,14 @@ RUN apk add --update \
     curl \
     libffi \
     python2 \
-    py2-pip \
     openssl \
     supervisor \
     squid \
   && rm -rf /var/cache/apk/*
+
+# Install pip via get-pip.py as it is no longer packaged for Python 2 by Alpine.
+# pip is a runtime as well as build dependency because it includes `pkg_resources`.
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python get-pip.py
 
 # Create the via user, group, home directory and package directory.
 RUN addgroup -S via && adduser -S -G via -h /var/lib/via via
