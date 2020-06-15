@@ -9,6 +9,7 @@ help:
 	@echo "make format            Correctly format the code"
 	@echo "make checkformatting   Crash if the code isn't correctly formatted"
 	@echo "make test              Run the unit tests"
+	@echo "make sure              Make sure that the formatter, linter, tests, etc all pass"
 	@echo "make pip-compile       Compile requirements.in to requirements.txt"
 	@echo "make docker            Make the app's Docker image"
 	@echo "make clean             Delete development artefacts (cached files, "
@@ -41,6 +42,9 @@ format: python
 .PHONY: checkformatting
 checkformatting: python
 	@tox -qe py36-checkformatting
+
+.PHONY: sure
+sure: checkformatting lint test
 
 .PHONY: pip-compile
 pip-compile: python
