@@ -4,8 +4,6 @@ MAINTAINER Hypothes.is Project and Ilya Kreymer
 # Install runtime deps.
 RUN apk add --update \
     git \
-    collectd \
-    collectd-disk \
     curl \
     libffi \
     python2 \
@@ -36,11 +34,6 @@ RUN apk add --update --virtual build-deps \
   && pip install --no-cache-dir -r requirements.txt \
   && apk del build-deps \
   && rm -rf /var/cache/apk/*
-
-# Copy collectd config
-COPY conf/collectd.conf /etc/collectd/collectd.conf
-RUN mkdir /etc/collectd/collectd.conf.d \
- && chown via:via /etc/collectd/collectd.conf.d
 
 # Copy squid config
 COPY conf/squid.conf /etc/squid/squid.conf
