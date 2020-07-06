@@ -1,9 +1,9 @@
 from __future__ import unicode_literals
 
 import json
-import urlparse
 
 import pytest
+import urlparse
 from werkzeug import wsgi
 from werkzeug.test import Client
 from werkzeug.wrappers import BaseResponse as Response

@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 
 import logging
 from urllib import urlencode
+
 from urlparse import parse_qsl, urlparse, urlunparse
 
 from via.configuration import Configuration

@@ -1,10 +1,10 @@
 from __future__ import unicode_literals
 
 import os
-from urlparse import urlparse
 
 from jinja2 import Environment, FileSystemLoader
 from pkg_resources import resource_filename
+from urlparse import urlparse
 from werkzeug import wsgi
 from werkzeug.wrappers import BaseResponse as Response
 
