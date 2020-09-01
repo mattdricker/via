@@ -45,6 +45,7 @@ class Configuration(object):
         "requestConfigFromFrame",
         # Things which seem safe
         "enableExperimentalNewNoteButton",
+        "enableExperimentalPDFSideBySide",
         "externalContainerSelector",
         "focus",
         "showHighlights",
