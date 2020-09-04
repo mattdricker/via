@@ -43,6 +43,8 @@ class Configuration(object):
         # Things we use now
         "openSidebar",
         "requestConfigFromFrame",
+        # Any experimental feature
+        "experimental",
         # Things which seem safe
         "enableExperimentalNewNoteButton",
         "externalContainerSelector",
