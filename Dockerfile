@@ -20,7 +20,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python get-pip.py
 RUN addgroup -S via && adduser -S -G via -h /var/lib/via via
 WORKDIR /var/lib/via
 
-ADD requirements.txt .
+ADD requirements/requirements.txt .
 
 # Install build deps, build, and then clean up.
 RUN apk add --update --virtual build-deps \

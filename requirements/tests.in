@@ -1,0 +1,3 @@
+mock
+pytest
+-r requirements.txt
