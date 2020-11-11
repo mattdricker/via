@@ -25,17 +25,17 @@ block_examples = pytest.mark.parametrize(
         # Requests with no domain in the path.
         ("/", False, 200, ""),
         # Non-blocked requests.
-        ("/giraffe.com", False, 200, UPSTREAM_CONTENT),
-        ("/http://giraffe.com", False, 200, UPSTREAM_CONTENT),
-        ("/https://giraffe.com", False, 200, UPSTREAM_CONTENT),
-        ("/https://giraffe.com/foobar", False, 200, UPSTREAM_CONTENT),
+        ("/not-blocked.example.com", False, 200, UPSTREAM_CONTENT),
+        ("/http://not-blocked.example.com", False, 200, UPSTREAM_CONTENT),
+        ("/https://not-blocked.example.com", False, 200, UPSTREAM_CONTENT),
+        ("/https://not-blocked.example.com/foobar", False, 200, UPSTREAM_CONTENT),
         # A domain blocked for legal reasons.
-        ("/nautil.us", True, 451, "disallow access"),
+        ("/publisher-blocked.example.com", True, 451, "disallow access"),
         # Different variations of a blocked domain.
-        ("/www.youtube.com", True, 200, "cannot be annotated"),
-        ("/http://www.youtube.com", True, 200, "cannot be annotated"),
-        ("/https://www.youtube.com", True, 200, "cannot be annotated"),
-        ("/https://www.youtube.com/foobar", True, 200, "cannot be annotated"),
+        ("/blocked.example.com", True, 200, "cannot be annotated"),
+        ("/http://blocked.example.com", True, 200, "cannot be annotated"),
+        ("/https://blocked.example.com", True, 200, "cannot be annotated"),
+        ("/https://blocked.example.com/foobar", True, 200, "cannot be annotated"),
     ],
 )
 
@@ -132,8 +132,23 @@ foo bar baz
             yield mock_open
 
     @pytest.fixture
-    def app(self):
-        return Blocker(upstream_app)
+    def blocklist_file(self, tmp_path):
+        blocklist_file = str(tmp_path / "test-blocklist.txt")
+        _write_file(
+            blocklist_file,
+            """
+            # Some comments
+
+            publisher-blocked.example.com publisher-blocked
+            blocked.example.com blocked
+        """,
+        )
+
+        return blocklist_file
+
+    @pytest.fixture
+    def app(self, blocklist_file):
+        return Blocker(upstream_app, blocklist_path=blocklist_file)
 
     @pytest.fixture
     def client(self, app):
