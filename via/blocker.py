@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import os
+import re
 
 from jinja2 import Environment, FileSystemLoader
 from pkg_resources import resource_filename
@@ -25,6 +26,8 @@ class Blocker(object):
 
     Where "<reason>" is one of "publisher-blocked" or "blocked". Any lines
     beginning with '#' are ignored. Any lines not in the above form are ignored.
+
+    The domain can contain wildcards like this: '*.example.com'
     """
 
     def __init__(self, application, blocklist_path=DEFAULT_BLOCKLIST_PATH):
@@ -36,7 +39,7 @@ class Blocker(object):
         self._blocklist_path = blocklist_path
 
         # dict of domain to block reason.
-        self._blocked_domains = {}
+        self._blocked_domains_exact = {}
 
         # mtime of the blocklist file when it was last parsed.
         self._blocklist_timestamp = 0
@@ -53,9 +56,8 @@ class Blocker(object):
             url_to_annotate = "http://" + url_to_annotate
             parsed_url = urlparse(url_to_annotate)
 
-        hostname_to_annotate = parsed_url.hostname
-        if hostname_to_annotate in self._blocked_domains:
-            reason = self._blocked_domains[hostname_to_annotate]
+        reason = self._match_domain(domain=parsed_url.hostname)
+        if reason:
             if reason == "publisher-blocked":
                 template_name = "disallow_access.html.jinja2"
                 status = 451
@@ -71,17 +73,40 @@ class Blocker(object):
 
         return self._application(environ, start_response)
 
+    def _match_domain(self, domain):
+        if domain is None:
+            return
+
+        if domain in self._blocked_domains_exact:
+            return self._blocked_domains_exact[domain]
+
+        for pattern, reason in self._blocked_domains_pattern.iteritems():
+            if pattern.match(domain):
+                return reason
+
+        return None
+
     def _update_blocklist(self):
         blocklist_stinfo = os.stat(self._blocklist_path)
         if blocklist_stinfo.st_mtime == self._blocklist_timestamp:
             return
 
-        self._blocked_domains = _parse_blocklist(self._blocklist_path)
+        self._blocked_domains_exact, self._blocked_domains_pattern = _parse_blocklist(
+            self._blocklist_path
+        )
         self._blocklist_timestamp = blocklist_stinfo.st_mtime
 
 
+def _wildcard_to_regex(domain):
+    """Convert a string with '*' wildcards into a regex."""
+
+    pattern = "^" + re.escape(domain).replace("\\*", ".*") + "$"
+    return re.compile(pattern, re.IGNORECASE)
+
+
 def _parse_blocklist(path):
-    blocked_domains = {}
+    blocked_domains_exact = {}
+    blocked_domains_pattern = {}
 
     with open(path) as blocklist:
         for line in blocklist:
@@ -93,8 +118,12 @@ def _parse_blocklist(path):
 
             try:
                 domain, reason = line.split(" ")
-                blocked_domains[domain] = reason
+                if "*" in domain:
+                    pattern = _wildcard_to_regex(domain)
+                    blocked_domains_pattern[pattern] = reason
+                else:
+                    blocked_domains_exact[domain] = reason
             except Exception:
                 pass
 
-    return blocked_domains
+    return blocked_domains_exact, blocked_domains_pattern

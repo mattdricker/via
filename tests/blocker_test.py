@@ -36,6 +36,11 @@ block_examples = pytest.mark.parametrize(
         ("/http://blocked.example.com", True, 200, "cannot be annotated"),
         ("/https://blocked.example.com", True, 200, "cannot be annotated"),
         ("/https://blocked.example.com/foobar", True, 200, "cannot be annotated"),
+        # Wild card content
+        ("/anything.wild.example.com", True, 200, "cannot be annotated"),
+        ("/also.bad.wild.example.com", True, 200, "cannot be annotated"),
+        ("/http://anything.wild.example.com", True, 200, "cannot be annotated"),
+        ("/ok-wild.example.com", False, 200, UPSTREAM_CONTENT),
     ],
 )
 
@@ -141,6 +146,7 @@ foo bar baz
 
             publisher-blocked.example.com publisher-blocked
             blocked.example.com blocked
+            *.wild.example.com blocked
         """,
         )
 

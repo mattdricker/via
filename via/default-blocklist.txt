@@ -15,3 +15,5 @@ m.nautil.us publisher-blocked
 m.youtube.com blocked
 www.youtube.com blocked
 vimeo.com blocked
+
+*.example.net blocked
