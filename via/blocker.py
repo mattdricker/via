@@ -14,6 +14,12 @@ TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__)) + "/../templates/"
 
 
 class Blocker(object):
+    # Map block reasons to specific templates and status codes
+    templates = {
+        "malicious": ["malicious_website_warning.html.jinja2", 200],
+        "publisher-blocked": ["disallow_access.html.jinja2", 451],
+        "other": ["could_not_process.html.jinja2", 200],
+    }
 
     """
     Blocker is a WSGI middleware that returns a static response when a
@@ -58,12 +64,7 @@ class Blocker(object):
 
         reason = self._match_domain(domain=parsed_url.hostname)
         if reason:
-            if reason == "publisher-blocked":
-                template_name = "disallow_access.html.jinja2"
-                status = 451
-            else:
-                template_name = "could_not_process.html.jinja2"
-                status = 200
+            template_name, status = self.templates.get(reason, self.templates["other"])
 
             template = self._jinja_env.get_template(template_name).render(
                 url_to_annotate=url_to_annotate

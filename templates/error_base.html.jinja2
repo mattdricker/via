@@ -124,6 +124,25 @@
           h1 {font-size: 48px; line-height: 48px;}
           p, ol li {font-size: 18px; line-height: 24px;}
       }
+
+      /* Add exceptions for malicious view */
+
+      .icon.danger {
+        display: block;
+        height: 64px;
+        margin-bottom:10px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 33.867 33.867'%3E%3Cpath d='M16.933 0L0 29.633h33.867L16.933 0zm0 8.467c.56 0 1.1.223 1.497.62s.62.935.62 1.497l-1.058 9.525a1.06 1.06 0 0 1-1.058 1.058 1.06 1.06 0 0 1-1.058-1.058l-1.058-9.525c0-.56.223-1.1.62-1.497s.935-.62 1.497-.62zm0 14.817c.56 0 1.1.223 1.497.62s.62.935.62 1.497-.223 1.1-.62 1.497-.935.62-1.497.62-1.1-.223-1.497-.62-.62-.935-.62-1.497.223-1.1.62-1.497.935-.62 1.497-.62z' fill='%23fff'/%3E%3C/svg%3E");
+        background-size: 64px 64px;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+
+      body.danger {
+        color:white;
+        background-color: #aa0000;
+      }
+
+
     </style>
     <script async src="https://www.google-analytics.com/analytics.js"></script>
     <script>
@@ -132,7 +151,7 @@
         ga('send', 'pageview');
     </script>
   </head>
-  <body>
+  <body {% block body_attrs %}{% endblock %}>
     {% block content %}
     {% endblock %}
     <footer>

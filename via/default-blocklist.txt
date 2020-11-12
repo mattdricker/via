@@ -16,4 +16,5 @@ m.youtube.com blocked
 www.youtube.com blocked
 vimeo.com blocked
 
+bad.example.net malicious
 *.example.net blocked

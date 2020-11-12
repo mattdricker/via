@@ -31,6 +31,8 @@ block_examples = pytest.mark.parametrize(
         ("/https://not-blocked.example.com/foobar", False, 200, UPSTREAM_CONTENT),
         # A domain blocked for legal reasons.
         ("/publisher-blocked.example.com", True, 451, "disallow access"),
+        # A domain blocked because it's malicious
+        ("/malicious.example.com", True, 200, "Deceptive site ahead"),
         # Different variations of a blocked domain.
         ("/blocked.example.com", True, 200, "cannot be annotated"),
         ("/http://blocked.example.com", True, 200, "cannot be annotated"),
@@ -147,6 +149,7 @@ foo bar baz
             publisher-blocked.example.com publisher-blocked
             blocked.example.com blocked
             *.wild.example.com blocked
+            malicious.example.com malicious
         """,
         )
 
