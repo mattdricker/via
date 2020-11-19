@@ -4,7 +4,6 @@ MAINTAINER Hypothes.is Project and Ilya Kreymer
 # Install runtime deps.
 RUN apk add --update \
     git \
-    curl \
     libffi \
     python2 \
     openssl \
@@ -43,9 +42,6 @@ RUN mkdir /var/spool/squid \
 # Use local squid by default
 ENV HTTP_PROXY http://localhost:3128
 ENV HTTPS_PROXY http://localhost:3128
-
-ENV BLOCKLIST_PATH /tmp/blocklist.txt
-COPY --chown=via via/default-blocklist.txt /tmp/blocklist.txt
 
 # Install app.
 COPY . .
