@@ -5,6 +5,7 @@ werkzeug
 static
 PyYAML
 newrelic
+h-checkmatelib
 
 # this points to the 'fix-empty-srcset' branch in hypothesis/pywb
 # this is a fork of the upstream pywb (v0.11.0) with:

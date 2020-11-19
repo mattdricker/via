@@ -6,23 +6,36 @@
 #
 -e git+git://github.com/hypothesis/pywb.git@2d7602cd6d8a6dafe7353b16579dc757aaead6ed#egg=pywb  # via -r requirements/requirements.in
 argh==0.26.2              # via watchdog
+attrs==20.3.0             # via jsonschema
 certifi==2019.3.9         # via requests
 cffi==1.13.2              # via -r requirements/requirements.in
 chardet==3.0.4            # via pywb, requests
+configparser==4.0.2       # via importlib-metadata
+contextlib2==0.6.0.post1  # via importlib-metadata, zipp
+funcsigs==1.0.2           # via mock
+functools32==3.2.3.post2  # via jsonschema
+future==0.18.2            # via h-checkmatelib
 gevent==1.5.0             # via -r requirements/requirements.in
 greenlet==0.4.15          # via gevent
+h-checkmatelib==1.0.0     # via -r requirements/requirements.in
 idna==2.8                 # via requests, tldextract
+importlib-metadata==2.0.0  # via jsonschema
 jinja2==2.10.1            # via pywb
+jsonschema==3.2.0         # via h-checkmatelib
 markupsafe==1.1.1         # via jinja2
+mock==3.0.5               # via h-checkmatelib
 newrelic==5.4.1.134       # via -r requirements/requirements.in
+pathlib2==2.3.5           # via importlib-metadata
 pathtools==0.1.2          # via watchdog
 pycparser==2.19           # via cffi
+pyrsistent==0.16.1        # via h-checkmatelib, jsonschema
 pystache==0.5.4           # via static
 pyyaml==5.2               # via -r requirements/requirements.in, pywb, watchdog
 redis==3.2.1              # via pywb
 requests-file==1.4.3      # via tldextract
-requests==2.21.0          # via pywb, requests-file, tldextract
-six==1.12.0               # via requests-file
+requests==2.21.0          # via h-checkmatelib, pywb, requests-file, tldextract
+scandir==1.10.0           # via pathlib2
+six==1.12.0               # via jsonschema, mock, pathlib2, pyrsistent, requests-file
 static==1.1.1             # via -r requirements/requirements.in
 surt==0.2                 # via pywb
 tldextract==2.2.1         # via surt
@@ -31,6 +44,7 @@ uwsgi==2.0.18             # via -r requirements/requirements.in
 watchdog==0.9.0           # via pywb
 webencodings==0.5.1       # via pywb
 werkzeug==0.16.0          # via -r requirements/requirements.in
+zipp==1.2.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
