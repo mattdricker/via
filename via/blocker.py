@@ -1,19 +1,20 @@
 from __future__ import unicode_literals
 
 import os
-import re
+from logging import getLogger
 
+from checkmatelib import CheckmateClient, CheckmateException
 from jinja2 import Environment, FileSystemLoader
-from pkg_resources import resource_filename
 from urlparse import urlparse
 from werkzeug import wsgi
 from werkzeug.wrappers import BaseResponse as Response
 
-DEFAULT_BLOCKLIST_PATH = resource_filename("via", "default-blocklist.txt")
-TEMPLATES_DIR = os.path.dirname(os.path.abspath(__file__)) + "/../templates/"
+LOG = getLogger(__name__)
 
 
 class Blocker(object):
+    template_dir = os.path.dirname(os.path.abspath(__file__)) + "/../templates/"
+
     # Map block reasons to specific templates and status codes
     templates = {
         "malicious": ["malicious_website_warning.html.jinja2", 200],
@@ -36,35 +37,33 @@ class Blocker(object):
     The domain can contain wildcards like this: '*.example.com'
     """
 
-    def __init__(self, application, blocklist_path=DEFAULT_BLOCKLIST_PATH):
+    def __init__(self, application, checkmate_host=None):
         self._application = application
         self._jinja_env = Environment(
-            loader=FileSystemLoader(TEMPLATES_DIR), trim_blocks=True
+            loader=FileSystemLoader(self.template_dir), trim_blocks=True
         )
 
-        self._blocklist_path = blocklist_path
-
-        # dict of domain to block reason.
-        self._blocked_domains_exact = {}
-
-        # mtime of the blocklist file when it was last parsed.
-        self._blocklist_timestamp = 0
-
-        self._update_blocklist()
+        self._checkmate = CheckmateClient(checkmate_host)
 
     def __call__(self, environ, start_response):
-        self._update_blocklist()
-
         url_to_annotate = wsgi.get_path_info(environ)[1:]
         parsed_url = urlparse(url_to_annotate)
 
         if not parsed_url.scheme:
             url_to_annotate = "http://" + url_to_annotate
-            parsed_url = urlparse(url_to_annotate)
 
-        reason = self._match_domain(domain=parsed_url.hostname)
-        if reason:
-            template_name, status = self.templates.get(reason, self.templates["other"])
+        try:
+            hits = self._checkmate.check_url(url_to_annotate)
+        except CheckmateException as err:
+            LOG.warning(
+                "Failed to check url against checkmate with error: {}".format(err)
+            )
+            hits = None
+
+        if hits:
+            template_name, status = self.templates.get(
+                hits.reason_codes[0], self.templates["other"]
+            )
 
             template = self._jinja_env.get_template(template_name).render(
                 url_to_annotate=url_to_annotate
@@ -73,58 +72,3 @@ class Blocker(object):
             return resp(environ, start_response)
 
         return self._application(environ, start_response)
-
-    def _match_domain(self, domain):
-        if domain is None:
-            return
-
-        if domain in self._blocked_domains_exact:
-            return self._blocked_domains_exact[domain]
-
-        for pattern, reason in self._blocked_domains_pattern.iteritems():
-            if pattern.match(domain):
-                return reason
-
-        return None
-
-    def _update_blocklist(self):
-        blocklist_stinfo = os.stat(self._blocklist_path)
-        if blocklist_stinfo.st_mtime == self._blocklist_timestamp:
-            return
-
-        self._blocked_domains_exact, self._blocked_domains_pattern = _parse_blocklist(
-            self._blocklist_path
-        )
-        self._blocklist_timestamp = blocklist_stinfo.st_mtime
-
-
-def _wildcard_to_regex(domain):
-    """Convert a string with '*' wildcards into a regex."""
-
-    pattern = "^" + re.escape(domain).replace("\\*", ".*") + "$"
-    return re.compile(pattern, re.IGNORECASE)
-
-
-def _parse_blocklist(path):
-    blocked_domains_exact = {}
-    blocked_domains_pattern = {}
-
-    with open(path) as blocklist:
-        for line in blocklist:
-            line = line.strip()
-
-            if not line or line.startswith("#"):
-                # Empty or comment line.
-                continue
-
-            try:
-                domain, reason = line.split(" ")
-                if "*" in domain:
-                    pattern = _wildcard_to_regex(domain)
-                    blocked_domains_pattern[pattern] = reason
-                else:
-                    blocked_domains_exact[domain] = reason
-            except Exception:
-                pass
-
-    return blocked_domains_exact, blocked_domains_pattern

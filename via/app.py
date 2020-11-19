@@ -2,13 +2,13 @@ import logging
 import os
 
 import newrelic.agent
-import pywb.apps.wayback
 from pkg_resources import resource_filename
 from werkzeug import wsgi
 from werkzeug.exceptions import NotFound
 from werkzeug.utils import redirect
 from werkzeug.wrappers import Request
 
+import pywb.apps.wayback
 import static
 from via.blocker import Blocker
 from via.config_extractor import ConfigExtractor
@@ -67,14 +67,9 @@ def app(environ, start_response):
     return pywb.apps.wayback.application(environ, start_response)
 
 
-blocker_kwargs = {}
-blocklist_path = os.environ.get("BLOCKLIST_PATH")
-if blocklist_path:
-    blocker_kwargs["blocklist_path"] = blocklist_path
-
 application = RequestHeaderSanitiser(app)
 application = ResponseHeaderSanitiser(application)
-application = Blocker(application, **blocker_kwargs)
+application = Blocker(application, checkmate_host=os.environ["CHECKMATE_URL"])
 application = UserAgentDecorator(application, "Hypothesis-Via")
 application = ConfigExtractor(application)
 application = wsgi.DispatcherMiddleware(

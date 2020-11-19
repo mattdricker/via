@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import cgi
 
 import jinja2
+
 from pywb.framework.wbrequestresponse import WbResponse
 from pywb.webapp.live_rewrite_handler import RewriteHandler
 
