@@ -4,6 +4,7 @@ MAINTAINER Hypothes.is Project and Ilya Kreymer
 # Install runtime deps.
 RUN apk add --update \
     git \
+    curl \
     libffi \
     python2 \
     openssl \
