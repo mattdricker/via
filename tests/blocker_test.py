@@ -17,8 +17,7 @@ class TestBlocker:
 
         response = blocker(environ, sentinel.start_response)
 
-        blocker._application.assert_called_once_with(environ, sentinel.start_response)
-        assert response == blocker._application.return_value
+        self.assert_pass_through(blocker, environ, response)
 
     def test_it_passes_through_to_app_when_checkmate_fails(self, blocker):
         environ = {"PATH_INFO": "/http://any.example.com"}
@@ -26,8 +25,15 @@ class TestBlocker:
 
         response = blocker(environ, sentinel.start_response)
 
-        blocker._application.assert_called_once_with(environ, sentinel.start_response)
-        assert response == blocker._application.return_value
+        self.assert_pass_through(blocker, environ, response)
+
+    def test_it_skips_checking_for_the_root_page(self, blocker):
+        environ = {"PATH_INFO": "/"}
+
+        response = blocker(environ, sentinel.start_response)
+
+        blocker._checkmate.assert_not_called()
+        self.assert_pass_through(blocker, environ, response)
 
     @pytest.mark.parametrize(
         "url,expected_url",
@@ -63,6 +69,11 @@ class TestBlocker:
         resp = Response.return_value
         resp.assert_called_once_with(environ, sentinel.start_response)
         assert response == resp.return_value
+
+    @classmethod
+    def assert_pass_through(cls, blocker, environ, response):
+        blocker._application.assert_called_once_with(environ, sentinel.start_response)
+        assert response == blocker._application.return_value
 
     @pytest.fixture
     def good_url(self, CheckmateClient):

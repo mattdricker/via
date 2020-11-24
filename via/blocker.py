@@ -47,6 +47,11 @@ class Blocker(object):
 
     def __call__(self, environ, start_response):
         url_to_annotate = wsgi.get_path_info(environ)[1:]
+
+        if not url_to_annotate:
+            # This is our own landing page "/", no need to check this
+            return self._application(environ, start_response)
+
         parsed_url = urlparse(url_to_annotate)
 
         if not parsed_url.scheme:
