@@ -52,17 +52,6 @@ class Blocker(object):
             # This is our own landing page "/", no need to check this
             return self._application(environ, start_response)
 
-        if url_to_annotate.startswith(
-            "https://via.hypothes.is"
-        ) or url_to_annotate.startswith("https://qa-via.hypothes.is"):
-            template_name, status = self.templates["other"]
-
-            template = self._jinja_env.get_template(template_name).render(
-                url_to_annotate=url_to_annotate
-            )
-            resp = Response(template, status=status, mimetype="text/html")
-            return resp(environ, start_response)
-
         parsed_url = urlparse(url_to_annotate)
 
         if not parsed_url.scheme:
