@@ -8,10 +8,10 @@
     </header>
     <article>
       <p>
-        Unfortunately, the publisher of this page has requested that we disallow access
-        to it through this Hypothesis service. That means we can't show you the page
+        Unfortunately, the publisher of this page has requested that we disallow annotating
+        it with Via. That means we can't show you the page
         you were looking for right away…
       </p>
-      {{ instructions.view_annotations(url_to_annotate) }}
+      {{ instructions.view_annotations(url_to_annotate, domain_to_annotate) }}
     </article>
 {% endblock %}

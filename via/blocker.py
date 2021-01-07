@@ -71,7 +71,8 @@ class Blocker(object):
             )
 
             template = self._jinja_env.get_template(template_name).render(
-                url_to_annotate=url_to_annotate
+                url_to_annotate=url_to_annotate,
+                domain_to_annotate=parsed_url.netloc,
             )
             resp = Response(template, status=status, mimetype="text/html")
             return resp(environ, start_response)

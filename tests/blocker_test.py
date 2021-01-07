@@ -51,7 +51,7 @@ class TestBlocker:
         "reason,content,status_code",
         (
             ("malicious", "Deceptive site ahead", 200),
-            ("publisher-blocked", "requested that we disallow access", 451),
+            ("publisher-blocked", "requested that we disallow annotating", 451),
             ("anything_else", "cannot be annotated", 200),
         ),
     )

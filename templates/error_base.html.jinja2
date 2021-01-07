@@ -38,9 +38,6 @@
       body {
           line-height: 1;
       }
-      ol, ul {
-          list-style: none;
-      }
       blockquote, q {
           quotes: none;
       }
@@ -83,6 +80,10 @@
           margin: 0 auto;
       }
 
+      ul > li > ol {
+          padding-left: 1em;
+      }
+
       strong {
           font-weight: 700;
       }
@@ -97,17 +98,6 @@
           border-bottom: 1px solid #333333;
           text-decoration: none;
           color: #333333;
-      }
-
-      ol {
-          list-style-type: decimal;
-          padding-left: 17px;
-      }
-
-      ol li {
-          font-size: 20px;
-          line-height: 27px;
-          padding-bottom: 30px;
       }
 
       a:hover {
