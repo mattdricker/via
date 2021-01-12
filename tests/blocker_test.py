@@ -97,6 +97,17 @@ class TestBlocker:
                 (Ref.EFFECTIVE_URL, Path.EFFECTIVE_URL),
             ),
             (
+                # Check an optimisation when the resolved URLs are identical
+                # via_page -> * == referrer_check
+                (
+                    "http://via/http://identical.example.com",
+                    "/http://identical.example.com",
+                ),
+                # Note the partial check is skipped because it's covered
+                # by the full check
+                ("http://identical.example.com", None),
+            ),
+            (
                 # None -> via_page == page_to_check
                 (None, Path.VIA_PAGE),
                 (Path.EFFECTIVE_URL, None),

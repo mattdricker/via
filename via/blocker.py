@@ -71,6 +71,15 @@ class Blocker(object):
             classified_url, classified_referrer
         )
 
+        if (
+            full_check
+            and partial_check
+            and full_check.effective_url == partial_check.effective_url
+        ):
+            # Don't do the partial check if it's just a cut down version of the
+            # full one. We'll already have caught whatever we are going to catch
+            partial_check = None
+
         # Apply the checks
         for classified_url, allow_all in ((full_check, False), (partial_check, True)):
             if not classified_url:
