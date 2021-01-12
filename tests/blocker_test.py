@@ -1,8 +1,8 @@
 import pytest
 from checkmatelib import CheckmateException
-from mock import create_autospec, patch, sentinel
+from mock import call, create_autospec, patch, sentinel
 
-from via.blocker import Blocker
+from via.blocker import Blocker, ClassifiedURL
 
 
 class AnyStringContaining(str):
@@ -10,8 +10,145 @@ class AnyStringContaining(str):
         return isinstance(other, (str, unicode)) and self in other
 
 
+class TestClassifiedURL:
+    @pytest.mark.parametrize(
+        "url,url_type,effective_url",
+        (
+            ("/", "via_landing_page", None),
+            ("/http://example.com", "via_page", "http://example.com"),
+            ("///example.com", "via_page", "http://example.com"),
+            ("/oe_/http://example.com", "via_sub_resource", "http://example.com"),
+        ),
+    )
+    def test_via_urls(self, url, url_type, effective_url):
+        classified = ClassifiedURL(url, via_host="n/a", assume_via=True)
+
+        assert classified.type == url_type
+        assert classified.effective_url == effective_url
+
+    @pytest.mark.parametrize(
+        "url,url_type,effective_url",
+        (
+            ("http://example.com", "3rd_party", None),
+            ("http://via/http://example.com", "via_page", "http://example.com"),
+            (
+                "http://via/oe_/http://example.com",
+                "via_sub_resource",
+                "http://example.com",
+            ),
+        ),
+    )
+    def test_referrer_urls(self, url, url_type, effective_url):
+        classified = ClassifiedURL(url, via_host="via", assume_via=False)
+
+        assert classified.type == url_type
+        assert classified.effective_url == effective_url
+
+    def test_sub_resource_type_extraction(self):
+        classified = ClassifiedURL(
+            "http://via/oe_/http://example.com", via_host="via", assume_via=False
+        )
+
+        assert classified.resource_type == "oe"
+
+
+class Ref:
+    VIA_HOME_PAGE = "http://via/"
+    VIA_SUB_RESOURCE = "http://via/oe_/http://example.com/referrer"
+    VIA_PAGE = "http://via/http://example.com/referrer"
+    EFFECTIVE_URL = "http://example.com/referrer"
+
+
+class Path:
+    VIA_HOME_PAGE = "/"
+    VIA_SUB_RESOURCE = "/oe_/http://example.com/path"
+    VIA_PAGE = "/http://example.com/path"
+    EFFECTIVE_URL = "http://example.com/path"
+
+
 class TestBlocker:
-    @pytest.mark.usefixtures("good_url")
+    @pytest.mark.usefixtures("good_urls")
+    @pytest.mark.parametrize(
+        "urls,checks",
+        (
+            (
+                # * -> via_landing_page == landing_page
+                ("http://irrelevant", Path.VIA_HOME_PAGE),
+                (None, None),
+            ),
+            (
+                # None -> via_page == page_to_check
+                (None, Path.VIA_PAGE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+            (
+                # via_sub_resource -> via_sub_resource == nested_resource
+                (Ref.VIA_SUB_RESOURCE, Path.VIA_SUB_RESOURCE),
+                (None, Path.EFFECTIVE_URL),
+            ),
+            (
+                # via_page -> * == referrer_check
+                (Ref.VIA_PAGE, Path.VIA_PAGE),
+                (Ref.EFFECTIVE_URL, Path.EFFECTIVE_URL),
+            ),
+            (
+                # via_sub_resource -> * == referrer_check
+                (Ref.VIA_SUB_RESOURCE, Path.VIA_PAGE),
+                (Ref.EFFECTIVE_URL, Path.EFFECTIVE_URL),
+            ),
+            (
+                # None -> via_page == page_to_check
+                (None, Path.VIA_PAGE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+            (
+                # via_landing_page -> via_page == page_to_check
+                (Ref.VIA_HOME_PAGE, Path.VIA_PAGE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+            (
+                # 3rd_party -> via_page == page_to_check
+                ("http://another.example.com", Path.VIA_PAGE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+            # Some wacky things that might happen if something weird was
+            # happening or someone was trying to avoid checking
+            (
+                # 3rd_party -> via_sub_resource == page_to_check
+                ("http://another.example.com", Path.VIA_SUB_RESOURCE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+            (
+                # None -> via_sub_resource == page_to_check
+                (None, Path.VIA_SUB_RESOURCE),
+                (Path.EFFECTIVE_URL, None),
+            ),
+        ),
+    )
+    def test_it_applies_rules_correctly(self, blocker, CheckmateClient, urls, checks):
+        referrer, path = urls
+        full_check, partial_check = checks
+
+        environ = {
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": path,
+            "HTTP_REFERER": referrer,
+            "HTTP_HOST": "via",
+        }
+
+        blocker(environ, sentinel.start_response)
+
+        calls = []
+
+        if full_check:
+            calls.append(call(full_check, allow_all=False))
+
+        if partial_check:
+            calls.append(call(partial_check, allow_all=True))
+
+        CheckmateClient.return_value.check_url.assert_has_calls(calls)
+
+    @pytest.mark.usefixtures("good_urls")
     def test_it_passes_through_to_app_with_a_good_url(self, blocker):
         environ = {"PATH_INFO": "/http://good.example.com"}
 
@@ -19,33 +156,15 @@ class TestBlocker:
 
         self.assert_pass_through(blocker, environ, response)
 
-    def test_it_passes_through_to_app_when_checkmate_fails(self, blocker):
+    def test_it_passes_through_to_app_when_checkmate_fails(
+        self, blocker, CheckmateClient
+    ):
         environ = {"PATH_INFO": "/http://any.example.com"}
-        blocker._checkmate.check_url.side_effect = CheckmateException
+        CheckmateClient.return_value.check_url.side_effect = CheckmateException
 
         response = blocker(environ, sentinel.start_response)
 
         self.assert_pass_through(blocker, environ, response)
-
-    def test_it_skips_checking_for_the_root_page(self, blocker):
-        environ = {"PATH_INFO": "/"}
-
-        response = blocker(environ, sentinel.start_response)
-
-        blocker._checkmate.assert_not_called()
-        self.assert_pass_through(blocker, environ, response)
-
-    @pytest.mark.parametrize(
-        "url,expected_url",
-        (
-            ("https://good.example.com", "https://good.example.com"),
-            ("no-schema.example.com", "http://no-schema.example.com"),
-        ),
-    )
-    def test_it_calls_the_blocking_service(self, blocker, url, expected_url):
-        blocker({"PATH_INFO": "/%s" % url}, sentinel.start_response)
-
-        blocker._checkmate.check_url.assert_called_once_with(expected_url)
 
     @pytest.mark.parametrize(
         "reason,content,status_code",
@@ -56,10 +175,10 @@ class TestBlocker:
         ),
     )
     def test_it_shows_a_block_page(
-        self, blocker, reason, content, status_code, Response
+        self, blocker, reason, content, status_code, Response, CheckmateClient
     ):
         environ = {"PATH_INFO": "/http://any.example.com"}
-        blocker._checkmate.check_url.return_value.reason_codes = [reason]
+        CheckmateClient.return_value.check_url.return_value.reason_codes = [reason]
         response = blocker(environ, sentinel.start_response)
 
         Response.assert_called_once_with(
@@ -76,7 +195,7 @@ class TestBlocker:
         assert response == blocker._application.return_value
 
     @pytest.fixture
-    def good_url(self, CheckmateClient):
+    def good_urls(self, CheckmateClient):
         CheckmateClient.return_value.check_url.return_value = None
 
     @pytest.fixture
