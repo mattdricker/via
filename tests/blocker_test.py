@@ -17,10 +17,11 @@ class TestClassifiedURL:
             ("/", "via_landing_page", None),
             ("/http://example.com", "via_page", "http://example.com"),
             ("///example.com", "via_page", "http://example.com"),
-            ("/oe_/http://example.com", "via_sub_resource", "http://example.com"),
+            ("/oe_/https://example.com", "via_sub_resource", "https://example.com"),
+            ("/if_///example.com", "via_sub_resource", "http://example.com"),
         ),
     )
-    def test_via_urls(self, url, url_type, effective_url):
+    def test_it_classifies_via_urls(self, url, url_type, effective_url):
         classified = ClassifiedURL(url, via_host="n/a", assume_via=True)
 
         assert classified.type == url_type
@@ -38,18 +39,50 @@ class TestClassifiedURL:
             ),
         ),
     )
-    def test_referrer_urls(self, url, url_type, effective_url):
+    def test_it_classifies_referrer_urls(self, url, url_type, effective_url):
         classified = ClassifiedURL(url, via_host="via", assume_via=False)
 
         assert classified.type == url_type
         assert classified.effective_url == effective_url
 
-    def test_sub_resource_type_extraction(self):
+    def test_it_extracts_sub_resource_type(self):
         classified = ClassifiedURL(
             "http://via/oe_/http://example.com", via_host="via", assume_via=False
         )
 
         assert classified.resource_type == "oe"
+
+    @pytest.mark.parametrize("prefix", ("http://", "//", ""))
+    @pytest.mark.parametrize(
+        "domain",
+        (
+            "www.example.com",
+            "host",
+            "host:1234",
+            "102.123.23.19",
+            "102.123.23.19:1234",
+        ),
+    )
+    def test_it_gets_the_right_domain_for_via_urls(self, prefix, domain):
+        url = "http://via/%s%s" % (prefix, domain)
+
+        classified = ClassifiedURL(url, via_host="via")
+
+        assert classified.parsed.netloc == domain
+
+    @pytest.mark.parametrize(
+        "url",
+        (
+            # We don't parse 3rd party URLs
+            "www.example.com",
+            # We don't parse the landing page
+            "http://via/",
+        ),
+    )
+    def test_it_doesnt_parse_certain_domains(self, url):
+        classified = ClassifiedURL(url, via_host="via")
+
+        assert not classified.parsed
 
 
 class Ref:

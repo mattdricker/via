@@ -156,7 +156,7 @@ class ClassifiedURL(object):
         :param assume_via: Assume this is a Via URL (rather than checking)
         """
         self.raw_url = raw_url
-        self.parsed = urlparse(raw_url) if raw_url else None
+        self.parsed = None
 
         self.resource_type = None
         self.type, self.effective_url = self._classify(via_host, assume_via)
@@ -165,33 +165,39 @@ class ClassifiedURL(object):
         if not self.raw_url:
             return None, None
 
-        if not assume_via and self.parsed.netloc != via_host:
+        parsed = urlparse(self.raw_url)
+
+        if not assume_via and parsed.netloc != via_host:
             return "3rd_party", None
 
         # This is a link from via of some kind
-        if self.parsed.path == "/":
+        if parsed.path == "/":
             return "via_landing_page", None
 
-        sub_resource = self.SUB_RESOURCE_RE.match(self.parsed.path)
+        sub_resource = self.SUB_RESOURCE_RE.match(parsed.path)
         if sub_resource:
             # This is a little gross, but we've parsed in now, so store it
             self.resource_type = sub_resource.group(1)
 
-            return "via_sub_resource", sub_resource.group(2)
+            url_type, url = "via_sub_resource", sub_resource.group(2)
+        else:
+            url_type, url = "via_page", parsed.path
 
-        return "via_page", self._clean_url(self.parsed.path)
+        url, self.parsed = self._clean_url(url)
+        return url_type, url
 
     @classmethod
     def _clean_url(cls, url):
         """Clean up a URL to ensure it's fully qualified."""
         url = url.lstrip("/")
 
-        parsed_url = urlparse(url)
+        parsed = urlparse(url)
 
-        if not parsed_url.scheme:
+        if not parsed.scheme:
             url = "http://" + url
+            parsed = urlparse(url)
 
-        return url
+        return url, parsed
 
     def __str__(self):
         return "<ClassifiedURL (%s %s)\n\teffective=%s\n\traw=%s>" % (
