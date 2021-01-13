@@ -6,6 +6,7 @@ from logging import getLogger
 
 from checkmatelib import CheckmateClient, CheckmateException
 from jinja2 import Environment, FileSystemLoader
+from repr import repr
 from urlparse import urlparse
 from werkzeug import wsgi
 from werkzeug.wrappers import BaseResponse as Response
@@ -50,48 +51,54 @@ class Blocker(object):
         # Parse the URL and referrer
         request_path = wsgi.get_path_info(environ)
         via_host = environ.get("HTTP_HOST")
-        classified_url = ClassifiedURL(request_path, via_host, assume_via=True)
-        classified_referrer = ClassifiedURL(environ.get("HTTP_REFERER"), via_host)
+        classified_url = ClassifiedURL.classify(request_path, via_host, assume_via=True)
+        classified_referrer = ClassifiedURL.classify(
+            environ.get("HTTP_REFERER"), via_host
+        )
 
         # Determine which urls should be run against checkmate (if any)
-        full_check, partial_check, rule_type = self._apply_rules(
+        full_check, partial_check, rule_type = self._get_urls_to_check(
             classified_url, classified_referrer
         )
 
         # Apply the checks
-        for classified_url, allow_all in ((full_check, False), (partial_check, True)):
-            if not classified_url:
+        for url_to_check, allow_all in ((full_check, False), (partial_check, True)):
+            if not url_to_check:
                 # No check of this type requested
                 continue
 
-            hits = self._check_url(classified_url.effective_url, allow_all=allow_all)
+            hits = self._check_url(url_to_check.effective_url, allow_all=allow_all)
             if not hits:
                 continue
 
-            response = self._render_block_template(hits, classified_url)
+            response = self._render_block_template(hits, url_to_check)
             return response(environ, start_response)
 
         return self._application(environ, start_response)
 
     @classmethod
-    def _apply_rules(cls, url, referrer):
+    def _get_urls_to_check(cls, url, referrer):
         """Determine what checks to make based on a URL and referrer.
+
+        This will return up to two of the passed in ClassifiedURL objects. The
+        first of which should have a full allow list enabled check. The second
+        should get a partial allow list disabled check.
+
+        The third item is the name of the triggered rule (purely for debugging)
 
         :param url: ClassifiedURL instance for the url being served
         :param referrer: ClassifiedURL instance for the referrer
         :return: A tuple of (full_check_url, partial_check_url, rule_type)
         """
-        url_type, ref_type = url.type, referrer.type
-
         # Although we never return anything other than the original URL, the
         # system is written to be flexible enough to return the referrer
         # instead or both if we want to. This is to allow future tweaks to the
         # ruleset without major refactoring.
 
-        if url_type == "via_landing_page":
+        if url.type == "via_landing_page":
             return None, None, "landing_page"
 
-        if ref_type in ("via_page", "via_sub_resource"):
+        if referrer.type in ("via_page", "via_sub_resource"):
             return None, url, "sub_resource_check"
 
         return url, None, "page_to_check"
@@ -125,43 +132,26 @@ class ClassifiedURL(object):
 
     SUB_RESOURCE_RE = re.compile(r"^/([a-z]{2})_/(.*)$")
 
-    def __init__(self, raw_url, via_host, assume_via=False):
-        """Parse a URL and determine it's features.
+    def __init__(self, type_, raw_url, effective_url=None, resource_type=None):
+        """Create a URL with metadata.
 
-        :param raw_url: URL to parse
-        :param via_host: The host Via is being served from
-        :param assume_via: Assume this is a Via URL (rather than checking)
+        :param type_: The classification of the URL
+        :param raw_url: The original raw URL
+        :param effective_url: If this is a Via proxy, the proxied site
+        :param resource_type: If this is a "sub_resource" the resource type
         """
         self.raw_url = raw_url
-        self.parsed = None
+        self.type = type_
 
-        self.resource_type = None
-        self.type, self.effective_url = self._classify(via_host, assume_via)
-
-    def _classify(self, via_host, assume_via):
-        if not self.raw_url:
-            return None, None
-
-        parsed = urlparse(self.raw_url)
-
-        if not assume_via and parsed.netloc != via_host:
-            return "3rd_party", None
-
-        # This is a link from via of some kind
-        if parsed.path == "/":
-            return "via_landing_page", None
-
-        sub_resource = self.SUB_RESOURCE_RE.match(parsed.path)
-        if sub_resource:
-            # This is a little gross, but we've parsed in now, so store it
-            self.resource_type = sub_resource.group(1)
-
-            url_type, url = "via_sub_resource", sub_resource.group(2)
+        if effective_url:
+            self.effective_url, self.parsed = self._clean_url(effective_url)
         else:
-            url_type, url = "via_page", parsed.path
+            self.effective_url, self.parsed = None, None
 
-        url, self.parsed = self._clean_url(url)
-        return url_type, url
+        if self.type == "via_sub_resource":
+            self.resource_type = resource_type
+        else:
+            self.resource_type = None
 
     @classmethod
     def _clean_url(cls, url):
@@ -176,10 +166,41 @@ class ClassifiedURL(object):
 
         return url, parsed
 
-    def __str__(self):
-        return "<ClassifiedURL (%s %s)\n\teffective=%s\n\traw=%s>" % (
-            self.type,
-            self.resource_type,
-            self.effective_url,
+    @classmethod
+    def classify(cls, raw_url, via_host, assume_via=False):
+        if not raw_url:
+            # Safety valve for being passed nonsense
+            return ClassifiedURL(None, raw_url)
+
+        parsed = urlparse(raw_url)
+
+        if not assume_via and parsed.netloc != via_host:
+            # A site other than Via
+            return ClassifiedURL("3rd_party", raw_url)
+
+        if parsed.path == "/":
+            # A request to Via's landing page
+            return ClassifiedURL("via_landing_page", raw_url)
+
+        sub_resource = cls.SUB_RESOURCE_RE.match(parsed.path)
+        if sub_resource:
+            # A request for a sub-resource of a proxied page.
+            return ClassifiedURL(
+                "via_sub_resource",
+                raw_url,
+                resource_type=sub_resource.group(1),
+                effective_url=sub_resource.group(2),
+            )
+
+        # A top level request to proxy a page or a sub-resource that looks
+        # identical to one
+        return ClassifiedURL("via_page", raw_url, effective_url=parsed.path)
+
+    def __repr__(self):
+        return "%s(%s, %s, %s, %s)" % (
+            self.__class__.__name__,
+            repr(self.type),
             self.raw_url,
+            self.effective_url,
+            repr(self.resource_type),
         )

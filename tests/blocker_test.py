@@ -22,7 +22,7 @@ class TestClassifiedURL:
         ),
     )
     def test_it_classifies_via_urls(self, url, url_type, effective_url):
-        classified = ClassifiedURL(url, via_host="n/a", assume_via=True)
+        classified = ClassifiedURL.classify(url, via_host="n/a", assume_via=True)
 
         assert classified.type == url_type
         assert classified.effective_url == effective_url
@@ -40,13 +40,13 @@ class TestClassifiedURL:
         ),
     )
     def test_it_classifies_referrer_urls(self, url, url_type, effective_url):
-        classified = ClassifiedURL(url, via_host="via", assume_via=False)
+        classified = ClassifiedURL.classify(url, via_host="via", assume_via=False)
 
         assert classified.type == url_type
         assert classified.effective_url == effective_url
 
     def test_it_extracts_sub_resource_type(self):
-        classified = ClassifiedURL(
+        classified = ClassifiedURL.classify(
             "http://via/oe_/http://example.com", via_host="via", assume_via=False
         )
 
@@ -66,7 +66,7 @@ class TestClassifiedURL:
     def test_it_gets_the_right_domain_for_via_urls(self, prefix, domain):
         url = "http://via/%s%s" % (prefix, domain)
 
-        classified = ClassifiedURL(url, via_host="via")
+        classified = ClassifiedURL.classify(url, via_host="via")
 
         assert classified.parsed.netloc == domain
 
@@ -80,7 +80,7 @@ class TestClassifiedURL:
         ),
     )
     def test_it_doesnt_parse_certain_domains(self, url):
-        classified = ClassifiedURL(url, via_host="via")
+        classified = ClassifiedURL.classify(url, via_host="via")
 
         assert not classified.parsed
 
