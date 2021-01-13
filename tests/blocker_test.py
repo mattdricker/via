@@ -12,7 +12,7 @@ class AnyStringContaining(str):
 
 class TestClassifiedURL:
     @pytest.mark.parametrize(
-        "url,url_type,effective_url",
+        "url,url_type,proxied_url",
         (
             ("/", "via_landing_page", None),
             ("/http://example.com", "via_page", "http://example.com"),
@@ -21,14 +21,14 @@ class TestClassifiedURL:
             ("/if_///example.com", "via_sub_resource", "http://example.com"),
         ),
     )
-    def test_it_classifies_via_urls(self, url, url_type, effective_url):
+    def test_it_classifies_via_urls(self, url, url_type, proxied_url):
         classified = ClassifiedURL.classify(url, via_host="n/a", assume_via=True)
 
         assert classified.type == url_type
-        assert classified.effective_url == effective_url
+        assert classified.proxied_url == proxied_url
 
     @pytest.mark.parametrize(
-        "url,url_type,effective_url",
+        "url,url_type,proxied_url",
         (
             ("http://example.com", "3rd_party", None),
             ("http://via/http://example.com", "via_page", "http://example.com"),
@@ -39,11 +39,11 @@ class TestClassifiedURL:
             ),
         ),
     )
-    def test_it_classifies_referrer_urls(self, url, url_type, effective_url):
+    def test_it_classifies_referrer_urls(self, url, url_type, proxied_url):
         classified = ClassifiedURL.classify(url, via_host="via", assume_via=False)
 
         assert classified.type == url_type
-        assert classified.effective_url == effective_url
+        assert classified.proxied_url == proxied_url
 
     def test_it_extracts_sub_resource_type(self):
         classified = ClassifiedURL.classify(
@@ -68,7 +68,7 @@ class TestClassifiedURL:
 
         classified = ClassifiedURL.classify(url, via_host="via")
 
-        assert classified.parsed.netloc == domain
+        assert classified.proxied_domain == domain
 
     @pytest.mark.parametrize(
         "url",
@@ -82,7 +82,7 @@ class TestClassifiedURL:
     def test_it_doesnt_parse_certain_domains(self, url):
         classified = ClassifiedURL.classify(url, via_host="via")
 
-        assert not classified.parsed
+        assert not classified.proxied_domain
 
 
 class Ref:

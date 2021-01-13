@@ -67,7 +67,7 @@ class Blocker(object):
                 # No check of this type requested
                 continue
 
-            hits = self._check_url(url_to_check.effective_url, allow_all=allow_all)
+            hits = self._check_url(url_to_check.proxied_url, allow_all=allow_all)
             if not hits:
                 continue
 
@@ -121,8 +121,8 @@ class Blocker(object):
         )
 
         template = self._jinja_env.get_template(template_name).render(
-            url_to_annotate=classified_url.effective_url,
-            domain_to_annotate=classified_url.parsed.netloc,
+            url_to_annotate=classified_url.proxied_url,
+            domain_to_annotate=classified_url.proxied_domain,
         )
         return Response(template, status=status, mimetype="text/html")
 
@@ -132,21 +132,21 @@ class ClassifiedURL(object):
 
     SUB_RESOURCE_RE = re.compile(r"^/([a-z]{2})_/(.*)$")
 
-    def __init__(self, type_, raw_url, effective_url=None, resource_type=None):
+    def __init__(self, type_, raw_url, proxied_url=None, resource_type=None):
         """Create a URL with metadata.
 
         :param type_: The classification of the URL
         :param raw_url: The original raw URL
-        :param effective_url: If this is a Via proxy, the proxied site
+        :param proxied_url: If this is a Via proxy, the proxied site
         :param resource_type: If this is a "sub_resource" the resource type
         """
         self.raw_url = raw_url
         self.type = type_
 
-        if effective_url:
-            self.effective_url, self.parsed = self._clean_url(effective_url)
+        if proxied_url:
+            self.proxied_url, self.proxied_domain = self._clean_url(proxied_url)
         else:
-            self.effective_url, self.parsed = None, None
+            self.proxied_url, self.proxied_domain = None, None
 
         if self.type == "via_sub_resource":
             self.resource_type = resource_type
@@ -164,7 +164,7 @@ class ClassifiedURL(object):
             url = "http://" + url
             parsed = urlparse(url)
 
-        return url, parsed
+        return url, parsed.netloc
 
     @classmethod
     def classify(cls, raw_url, via_host, assume_via=False):
@@ -189,18 +189,18 @@ class ClassifiedURL(object):
                 "via_sub_resource",
                 raw_url,
                 resource_type=sub_resource.group(1),
-                effective_url=sub_resource.group(2),
+                proxied_url=sub_resource.group(2),
             )
 
         # A top level request to proxy a page or a sub-resource that looks
         # identical to one
-        return ClassifiedURL("via_page", raw_url, effective_url=parsed.path)
+        return ClassifiedURL("via_page", raw_url, proxied_url=parsed.path)
 
     def __repr__(self):
         return "%s(%s, %s, %s, %s)" % (
             self.__class__.__name__,
             repr(self.type),
             self.raw_url,
-            self.effective_url,
+            self.proxied_url,
             repr(self.resource_type),
         )
