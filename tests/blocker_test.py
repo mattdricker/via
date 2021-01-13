@@ -86,87 +86,52 @@ class TestClassifiedURL:
 
 
 class Ref:
-    VIA_HOME_PAGE = "http://via/"
+    VIA_HOME = "http://via/"
     VIA_SUB_RESOURCE = "http://via/oe_/http://example.com/referrer"
     VIA_PAGE = "http://via/http://example.com/referrer"
-    EFFECTIVE_URL = "http://example.com/referrer"
+    URL = "http://example.com/referrer"
 
 
 class Path:
-    VIA_HOME_PAGE = "/"
+    VIA_HOME = "/"
     VIA_SUB_RESOURCE = "/oe_/http://example.com/path"
     VIA_PAGE = "/http://example.com/path"
-    EFFECTIVE_URL = "http://example.com/path"
+    URL = "http://example.com/path"
 
 
 class TestBlocker:
     @pytest.mark.usefixtures("good_urls")
     @pytest.mark.parametrize(
-        "urls,checks",
+        "referrer,path,full_check,partial_check",
         (
-            (
-                # * -> via_landing_page == landing_page
-                ("http://irrelevant", Path.VIA_HOME_PAGE),
-                (None, None),
-            ),
-            (
-                # None -> via_page == page_to_check
-                (None, Path.VIA_PAGE),
-                (Path.EFFECTIVE_URL, None),
-            ),
-            (
-                # via_sub_resource -> * == sub_resource_check
-                (Ref.VIA_SUB_RESOURCE, Path.VIA_SUB_RESOURCE),
-                (None, Path.EFFECTIVE_URL),
-            ),
-            (
-                # via_sub_resource -> * == sub_resource_check
-                (Ref.VIA_SUB_RESOURCE, Path.VIA_PAGE),
-                (None, Path.EFFECTIVE_URL),
-            ),
-            (
-                # via_page -> * == sub_resource_check
-                (Ref.VIA_PAGE, Path.VIA_PAGE),
-                (None, Path.EFFECTIVE_URL),
-            ),
-            (
-                # via_page -> * == sub_resource_check
-                (Ref.VIA_PAGE, Path.VIA_SUB_RESOURCE),
-                (None, Path.EFFECTIVE_URL),
-            ),
-            (
-                # None -> via_page == page_to_check
-                (None, Path.VIA_PAGE),
-                (Path.EFFECTIVE_URL, None),
-            ),
-            (
-                # via_landing_page -> via_page == page_to_check
-                (Ref.VIA_HOME_PAGE, Path.VIA_PAGE),
-                (Path.EFFECTIVE_URL, None),
-            ),
-            (
-                # 3rd_party -> via_page == page_to_check
-                ("http://another.example.com", Path.VIA_PAGE),
-                (Path.EFFECTIVE_URL, None),
-            ),
+            # RULE: "landing_page"
+            # If we are on the landing page, don't check it
+            ("http://any", Path.VIA_HOME, None, None),
+            # RULE: "page_to_check"
+            # If we arrive on a page but didn't come from Via, or came from the
+            # Via landing page we should do a full check on that page
+            (None, Path.VIA_PAGE, Path.URL, None),
+            (None, Path.VIA_SUB_RESOURCE, Path.URL, None),
+            (Ref.VIA_HOME, Path.VIA_PAGE, Path.URL, None),
+            (Ref.VIA_HOME, Path.VIA_SUB_RESOURCE, Path.URL, None),
+            ("http://3rd_party", Path.VIA_PAGE, Path.URL, None),
             # Some wacky things that might happen if something weird was
             # happening or someone was trying to avoid checking
-            (
-                # 3rd_party -> via_sub_resource == page_to_check
-                ("http://another.example.com", Path.VIA_SUB_RESOURCE),
-                (Path.EFFECTIVE_URL, None),
-            ),
-            (
-                # None -> via_sub_resource == page_to_check
-                (None, Path.VIA_SUB_RESOURCE),
-                (Path.EFFECTIVE_URL, None),
-            ),
+            ("http://3rd_party", Path.VIA_SUB_RESOURCE, Path.URL, None),
+            # RULE: "sub_resource_check"
+            # If we are on an identified sub-resource on a page, and came from
+            # Via page (other than the landing page) then we can assume that
+            # page has been checked and do a partial check. Many "via_page"s
+            # are actually sub resources in disguise.
+            (Ref.VIA_SUB_RESOURCE, Path.VIA_SUB_RESOURCE, None, Path.URL),
+            (Ref.VIA_SUB_RESOURCE, Path.VIA_PAGE, None, Path.URL),
+            (Ref.VIA_PAGE, Path.VIA_SUB_RESOURCE, None, Path.URL),
+            (Ref.VIA_PAGE, Path.VIA_PAGE, None, Path.URL),
         ),
     )
-    def test_it_applies_rules_correctly(self, blocker, CheckmateClient, urls, checks):
-        referrer, path = urls
-        full_check, partial_check = checks
-
+    def test_it_applies_rules_correctly(
+        self, blocker, CheckmateClient, referrer, path, full_check, partial_check
+    ):
         environ = {
             "REQUEST_METHOD": "GET",
             "PATH_INFO": path,

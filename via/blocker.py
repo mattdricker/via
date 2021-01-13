@@ -83,6 +83,11 @@ class Blocker(object):
         """
         url_type, ref_type = url.type, referrer.type
 
+        # Although we never return anything other than the original URL, the
+        # system is written to be flexible enough to return the referrer
+        # instead or both if we want to. This is to allow future tweaks to the
+        # ruleset without major refactoring.
+
         if url_type == "via_landing_page":
             return None, None, "landing_page"
 
