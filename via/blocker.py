@@ -71,15 +71,6 @@ class Blocker(object):
             classified_url, classified_referrer
         )
 
-        if (
-            full_check
-            and partial_check
-            and full_check.effective_url == partial_check.effective_url
-        ):
-            # Don't do the partial check if it's just a cut down version of the
-            # full one. We'll already have caught whatever we are going to catch
-            partial_check = None
-
         # Apply the checks
         for classified_url, allow_all in ((full_check, False), (partial_check, True)):
             if not classified_url:
@@ -108,14 +99,8 @@ class Blocker(object):
         if url_type == "via_landing_page":
             return None, None, "landing_page"
 
-        if ref_type == "via_sub_resource" and url_type == "via_sub_resource":
-            # For sub-resources of sub-resources we will assume that the parent
-            # has already been checked. Most CDNs and such won't be on our
-            # allow list, so only do a partial check on the actual resource
-            return None, url, "nested_resource"
-
         if ref_type in ("via_page", "via_sub_resource"):
-            return referrer, url, "referrer_check"
+            return None, url, "sub_resource_check"
 
         return url, None, "page_to_check"
 

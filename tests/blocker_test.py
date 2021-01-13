@@ -115,30 +115,24 @@ class TestBlocker:
                 (Path.EFFECTIVE_URL, None),
             ),
             (
-                # via_sub_resource -> via_sub_resource == nested_resource
+                # via_sub_resource -> * == sub_resource_check
                 (Ref.VIA_SUB_RESOURCE, Path.VIA_SUB_RESOURCE),
                 (None, Path.EFFECTIVE_URL),
             ),
             (
-                # via_page -> * == referrer_check
-                (Ref.VIA_PAGE, Path.VIA_PAGE),
-                (Ref.EFFECTIVE_URL, Path.EFFECTIVE_URL),
-            ),
-            (
-                # via_sub_resource -> * == referrer_check
+                # via_sub_resource -> * == sub_resource_check
                 (Ref.VIA_SUB_RESOURCE, Path.VIA_PAGE),
-                (Ref.EFFECTIVE_URL, Path.EFFECTIVE_URL),
+                (None, Path.EFFECTIVE_URL),
             ),
             (
-                # Check an optimisation when the resolved URLs are identical
-                # via_page -> * == referrer_check
-                (
-                    "http://via/http://identical.example.com",
-                    "/http://identical.example.com",
-                ),
-                # Note the partial check is skipped because it's covered
-                # by the full check
-                ("http://identical.example.com", None),
+                # via_page -> * == sub_resource_check
+                (Ref.VIA_PAGE, Path.VIA_PAGE),
+                (None, Path.EFFECTIVE_URL),
+            ),
+            (
+                # via_page -> * == sub_resource_check
+                (Ref.VIA_PAGE, Path.VIA_SUB_RESOURCE),
+                (None, Path.EFFECTIVE_URL),
             ),
             (
                 # None -> via_page == page_to_check
