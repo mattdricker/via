@@ -165,10 +165,10 @@ class ClassifiedURL(object):
         else:
             self.proxied_url, self.proxied_domain = None, None
 
-        if self.type == self.Type.VIA_SUB_RESOURCE:
-            self.resource_type = resource_type
-        else:
-            self.resource_type = None
+        if type_ != self.Type.VIA_SUB_RESOURCE:
+            assert resource_type is None
+
+        self.resource_type = resource_type
 
     @classmethod
     def _clean_url(cls, url):
