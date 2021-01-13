@@ -5,25 +5,12 @@ import re
 from logging import getLogger
 
 from checkmatelib import CheckmateClient, CheckmateException
-from functools32 import lru_cache
 from jinja2 import Environment, FileSystemLoader
 from urlparse import urlparse
 from werkzeug import wsgi
 from werkzeug.wrappers import BaseResponse as Response
 
 LOG = getLogger(__name__)
-
-
-class CachingCheckmateClient(object):
-    def __init__(self, checker):
-        self.checker = checker
-
-    # A TTL cache with a limit would be better here, but these should get
-    # flushed out pretty quick by volume with luck. We should cache as _many_
-    # of the referrer checks go back to the same URL
-    @lru_cache(1024)
-    def check_url(self, url_to_check, allow_all):
-        return self.checker.check_url(url_to_check, allow_all=allow_all)
 
 
 class Blocker(object):
@@ -57,7 +44,7 @@ class Blocker(object):
             loader=FileSystemLoader(self.template_dir), trim_blocks=True
         )
 
-        self._checkmate = CachingCheckmateClient(CheckmateClient(checkmate_host))
+        self._checkmate = CheckmateClient(checkmate_host)
 
     def __call__(self, environ, start_response):
         # Parse the URL and referrer
