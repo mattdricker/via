@@ -80,15 +80,20 @@ class Blocker(object):
     def _get_urls_to_check(cls, url, referrer):
         """Determine what checks to make based on a URL and referrer.
 
-        This will return up to two of the passed in ClassifiedURL objects. The
-        first of which should have a full allow list enabled check. The second
-        should get a partial allow list disabled check.
+        Return a tuple of three items:
+ 
+        1. A URL that should be "fully checked" (checked against both Checkmate's
+           allow-list and its block-list).
+           This will be one of the given `url` or `referrer`, or `None`
+        2. A URL that should be "partially checked" (checked against Checkmate's
+           block-list only).
+           This will also be one of the given `url` or `referrer`, or `None`
+        3. The name of the triggered rule (for debugging)
 
-        The third item is the name of the triggered rule (purely for debugging)
 
         :param url: ClassifiedURL instance for the url being served
         :param referrer: ClassifiedURL instance for the referrer
-        :return: A tuple of (full_check_url, partial_check_url, rule_type)
+        :return: A tuple of (url_to_fully_check, url_to_partially_check, rule_type)
         """
         # Although we never return anything other than the original URL, the
         # system is written to be flexible enough to return the referrer
@@ -169,17 +174,17 @@ class ClassifiedURL(object):
     @classmethod
     def classify(cls, raw_url, via_host, assume_via=False):
         if not raw_url:
-            # Safety valve for being passed nonsense
+            # This happens when the Referer header is missing.
             return ClassifiedURL(None, raw_url)
 
         parsed = urlparse(raw_url)
 
         if not assume_via and parsed.netloc != via_host:
-            # A site other than Via
+            # This happens when the URL in the Referer header is to a site other than Via.
             return ClassifiedURL("3rd_party", raw_url)
 
         if parsed.path == "/":
-            # A request to Via's landing page
+            # A request to Via's landing page.
             return ClassifiedURL("via_landing_page", raw_url)
 
         sub_resource = cls.SUB_RESOURCE_RE.match(parsed.path)
