@@ -81,7 +81,7 @@ class Blocker(object):
         """Determine what checks to make based on a URL and referrer.
 
         Return a tuple of three items:
- 
+
         1. A URL that should be "fully checked" (checked against both Checkmate's
            allow-list and its block-list).
            This will be one of the given `url` or `referrer`, or `None`
@@ -100,10 +100,13 @@ class Blocker(object):
         # instead or both if we want to. This is to allow future tweaks to the
         # ruleset without major refactoring.
 
-        if url.type == "via_landing_page":
+        if url.type == ClassifiedURL.Type.VIA_LANDING_PAGE:
             return None, None, "landing_page"
 
-        if referrer.type in ("via_page", "via_sub_resource"):
+        if referrer.type in (
+            ClassifiedURL.Type.VIA_PAGE,
+            ClassifiedURL.Type.VIA_SUB_RESOURCE,
+        ):
             return None, url, "sub_resource_check"
 
         return url, None, "page_to_check"
@@ -135,15 +138,24 @@ class Blocker(object):
 class ClassifiedURL(object):
     """A URL with extra information about it's source."""
 
-    SUB_RESOURCE_RE = re.compile(r"^/([a-z]{2})_/(.*)$")
+    class Type(object):
+        # The URL isn't from Via at all
+        THIRD_PARTY = "3rd_party"
+        # The URL is the Via landing page
+        VIA_LANDING_PAGE = "via_landing_page"
+        # The URL is a Via sub-resource served from a page
+        VIA_SUB_RESOURCE = "via_sub_resource"
+        # The URL is a Via proxied root page, or indistinguishable from one
+        VIA_PAGE = "via_page"
 
     def __init__(self, type_, raw_url, proxied_url=None, resource_type=None):
         """Create a URL with metadata.
 
-        :param type_: The classification of the URL
+        :param type_: The classification of the URL (from ClassifiedURL.Type)
+            or None
         :param raw_url: The original raw URL
         :param proxied_url: If this is a Via proxy, the proxied site
-        :param resource_type: If this is a "sub_resource" the resource type
+        :param resource_type: If this is a VIA_SUB_RESOURCE the resource type
         """
         self.raw_url = raw_url
         self.type = type_
@@ -153,7 +165,7 @@ class ClassifiedURL(object):
         else:
             self.proxied_url, self.proxied_domain = None, None
 
-        if self.type == "via_sub_resource":
+        if self.type == self.Type.VIA_SUB_RESOURCE:
             self.resource_type = resource_type
         else:
             self.resource_type = None
@@ -171,27 +183,29 @@ class ClassifiedURL(object):
 
         return url, parsed.netloc
 
+    SUB_RESOURCE_RE = re.compile(r"^/([a-z]{2})_/(.*)$")
+
     @classmethod
     def classify(cls, raw_url, via_host, assume_via=False):
         if not raw_url:
             # This happens when the Referer header is missing.
-            return ClassifiedURL(None, raw_url)
+            return cls(None, raw_url)
 
         parsed = urlparse(raw_url)
 
         if not assume_via and parsed.netloc != via_host:
             # This happens when the URL in the Referer header is to a site other than Via.
-            return ClassifiedURL("3rd_party", raw_url)
+            return cls(cls.Type.THIRD_PARTY, raw_url)
 
         if parsed.path == "/":
             # A request to Via's landing page.
-            return ClassifiedURL("via_landing_page", raw_url)
+            return cls(cls.Type.VIA_LANDING_PAGE, raw_url)
 
         sub_resource = cls.SUB_RESOURCE_RE.match(parsed.path)
         if sub_resource:
             # A request for a sub-resource of a proxied page.
-            return ClassifiedURL(
-                "via_sub_resource",
+            return cls(
+                cls.Type.VIA_SUB_RESOURCE,
                 raw_url,
                 resource_type=sub_resource.group(1),
                 proxied_url=sub_resource.group(2),
@@ -199,7 +213,7 @@ class ClassifiedURL(object):
 
         # A top level request to proxy a page or a sub-resource that looks
         # identical to one
-        return ClassifiedURL("via_page", raw_url, proxied_url=parsed.path)
+        return ClassifiedURL(cls.Type.VIA_PAGE, raw_url, proxied_url=parsed.path)
 
     def __repr__(self):
         return "%s(%s, %s, %s, %s)" % (

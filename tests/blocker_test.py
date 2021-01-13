@@ -14,11 +14,19 @@ class TestClassifiedURL:
     @pytest.mark.parametrize(
         "url,url_type,proxied_url",
         (
-            ("/", "via_landing_page", None),
-            ("/http://example.com", "via_page", "http://example.com"),
-            ("///example.com", "via_page", "http://example.com"),
-            ("/oe_/https://example.com", "via_sub_resource", "https://example.com"),
-            ("/if_///example.com", "via_sub_resource", "http://example.com"),
+            ("/", ClassifiedURL.Type.VIA_LANDING_PAGE, None),
+            ("/http://example.com", ClassifiedURL.Type.VIA_PAGE, "http://example.com"),
+            ("///example.com", ClassifiedURL.Type.VIA_PAGE, "http://example.com"),
+            (
+                "/oe_/https://example.com",
+                ClassifiedURL.Type.VIA_SUB_RESOURCE,
+                "https://example.com",
+            ),
+            (
+                "/if_///example.com",
+                ClassifiedURL.Type.VIA_SUB_RESOURCE,
+                "http://example.com",
+            ),
         ),
     )
     def test_it_classifies_via_urls(self, url, url_type, proxied_url):
@@ -30,8 +38,12 @@ class TestClassifiedURL:
     @pytest.mark.parametrize(
         "url,url_type,proxied_url",
         (
-            ("http://example.com", "3rd_party", None),
-            ("http://via/http://example.com", "via_page", "http://example.com"),
+            ("http://example.com", ClassifiedURL.Type.THIRD_PARTY, None),
+            (
+                "http://via/http://example.com",
+                ClassifiedURL.Type.VIA_PAGE,
+                "http://example.com",
+            ),
             (
                 "http://via/oe_/http://example.com",
                 "via_sub_resource",
