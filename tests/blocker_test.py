@@ -181,23 +181,18 @@ class TestBlocker:
 
         self.assert_pass_through(blocker, environ, response)
 
-    @pytest.mark.parametrize(
-        "reason,content,status_code",
-        (
-            ("malicious", "Deceptive site ahead", 200),
-            ("publisher-blocked", "requested that we disallow annotating", 451),
-            ("anything_else", "cannot be annotated", 200),
-        ),
-    )
-    def test_it_shows_a_block_page(
-        self, blocker, reason, content, status_code, Response, CheckmateClient
+    def test_it_redirects_to_checkmate_pages_for_blocked_sites(
+        self, blocker, Response, CheckmateClient
     ):
         environ = {"PATH_INFO": "/http://any.example.com"}
-        CheckmateClient.return_value.check_url.return_value.reason_codes = [reason]
+
         response = blocker(environ, sentinel.start_response)
 
+        blocked_response = CheckmateClient.return_value.check_url.return_value
         Response.assert_called_once_with(
-            AnyStringContaining(content), status=status_code, mimetype="text/html"
+            "",
+            status="307 Temporary Redirect",
+            headers=[("Location", blocked_response.presentation_url)],
         )
 
         resp = Response.return_value

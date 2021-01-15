@@ -1,11 +1,9 @@
 from __future__ import unicode_literals
 
-import os
 import re
 from logging import getLogger
 
 from checkmatelib import CheckmateClient, CheckmateException
-from jinja2 import Environment, FileSystemLoader
 from repr import repr
 from urlparse import urlparse
 from werkzeug import wsgi
@@ -15,14 +13,6 @@ LOG = getLogger(__name__)
 
 
 class Blocker(object):
-    template_dir = os.path.dirname(os.path.abspath(__file__)) + "/../templates/"
-
-    # Map block reasons to specific templates and status codes
-    templates = {
-        "malicious": ["malicious_website_warning.html.jinja2", 200],
-        "publisher-blocked": ["disallow_access.html.jinja2", 451],
-        "other": ["could_not_process.html.jinja2", 200],
-    }
 
     """
     Blocker is a WSGI middleware that returns a static response when a
@@ -41,10 +31,6 @@ class Blocker(object):
 
     def __init__(self, application, checkmate_host=None):
         self._application = application
-        self._jinja_env = Environment(
-            loader=FileSystemLoader(self.template_dir), trim_blocks=True
-        )
-
         self._checkmate = CheckmateClient(checkmate_host)
 
     def __call__(self, environ, start_response):
@@ -67,11 +53,15 @@ class Blocker(object):
                 # No check of this type requested
                 continue
 
-            hits = self._check_url(url_to_check.proxied_url, allow_all=allow_all)
-            if not hits:
+            blocked = self._check_url(url_to_check.proxied_url, allow_all=allow_all)
+            if not blocked:
                 continue
 
-            response = self._render_block_template(hits, url_to_check)
+            response = Response(
+                "",
+                status="307 Temporary Redirect",
+                headers=[("Location", blocked.presentation_url)],
+            )
             return response(environ, start_response)
 
         return self._application(environ, start_response)
@@ -122,17 +112,6 @@ class Blocker(object):
                 "Failed to check url against checkmate with error: {}".format(err)
             )
             return None
-
-    def _render_block_template(self, hits, classified_url):
-        template_name, status = self.templates.get(
-            hits.reason_codes[0], self.templates["other"]
-        )
-
-        template = self._jinja_env.get_template(template_name).render(
-            url_to_annotate=classified_url.proxied_url,
-            domain_to_annotate=classified_url.proxied_domain,
-        )
-        return Response(template, status=status, mimetype="text/html")
 
 
 class ClassifiedURL(object):
