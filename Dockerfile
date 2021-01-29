@@ -1,4 +1,4 @@
-FROM alpine:3.13.0
+FROM alpine:3.13.1
 MAINTAINER Hypothes.is Project and Ilya Kreymer
 
 # Install runtime deps.
