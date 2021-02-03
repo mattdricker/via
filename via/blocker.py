@@ -29,9 +29,9 @@ class Blocker(object):
     The domain can contain wildcards like this: '*.example.com'
     """
 
-    def __init__(self, application, checkmate_host=None):
+    def __init__(self, application, checkmate_host, api_key):
         self._application = application
-        self._checkmate = CheckmateClient(checkmate_host)
+        self._checkmate = CheckmateClient(checkmate_host, api_key)
 
     def __call__(self, environ, start_response):
         # Parse the URL and referrer

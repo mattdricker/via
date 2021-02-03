@@ -19,7 +19,7 @@ functools32==3.2.3.post2  # via -r requirements/requirements.txt, flake8, jsonsc
 future==0.18.2            # via -r requirements/requirements.txt, h-checkmatelib
 gevent==1.5.0             # via -r requirements/requirements.txt
 greenlet==0.4.15          # via -r requirements/requirements.txt, gevent
-h-checkmatelib==1.0.3     # via -r requirements/requirements.txt
+h-checkmatelib==1.0.5     # via -r requirements/requirements.txt
 idna==2.8                 # via -r requirements/requirements.txt, requests, tldextract
 importlib-metadata==2.0.0  # via -r requirements/requirements.txt, flake8, jsonschema
 jinja2==2.10.1            # via -r requirements/requirements.txt, pywb

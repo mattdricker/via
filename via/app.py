@@ -69,7 +69,11 @@ def app(environ, start_response):
 
 application = RequestHeaderSanitiser(app)
 application = ResponseHeaderSanitiser(application)
-application = Blocker(application, checkmate_host=os.environ["CHECKMATE_URL"])
+application = Blocker(
+    application,
+    checkmate_host=os.environ["CHECKMATE_URL"],
+    api_key=os.environ["CHECKMATE_API_KEY"],
+)
 application = UserAgentDecorator(application, "Hypothesis-Via")
 application = ConfigExtractor(application)
 application = wsgi.DispatcherMiddleware(

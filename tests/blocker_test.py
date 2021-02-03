@@ -210,7 +210,11 @@ class TestBlocker:
 
     @pytest.fixture
     def blocker(self, application):
-        return Blocker(application, checkmate_host="http://checkmate.example.com")
+        return Blocker(
+            application,
+            checkmate_host="http://checkmate.example.com",
+            api_key="test_api_key",
+        )
 
     @pytest.fixture
     def application(self):
