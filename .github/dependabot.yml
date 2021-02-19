@@ -1,0 +1,46 @@
+version: 2
+updates:
+- package-ecosystem: docker
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "10:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: alpine
+    versions:
+    - "> 3.13.1"
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "10:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: cffi
+    versions:
+    - "> 1.13.2"
+  - dependency-name: gevent
+    versions:
+    - "> 1.5.0"
+  - dependency-name: gunicorn
+    versions:
+    - "> 19.10.0"
+  - dependency-name: mock
+    versions:
+    - "> 3.0.5"
+  - dependency-name: newrelic
+    versions:
+    - "> 5.4.1.134"
+  - dependency-name: pytest
+    versions:
+    - "> 4.6.11"
+  - dependency-name: pyyaml
+    versions:
+    - "> 5.2"
+  - dependency-name: uwsgi
+    versions:
+    - "> 2.0.18"
+  - dependency-name: werkzeug
+    versions:
+    - "> 0.16.0"
