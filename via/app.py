@@ -7,7 +7,7 @@ from pkg_resources import resource_filename
 from werkzeug import wsgi
 from werkzeug.exceptions import NotFound
 from werkzeug.utils import redirect
-from werkzeug.wrappers import Request
+from werkzeug.wrappers import Request, Response
 
 import static
 from via.blocker import Blocker
@@ -57,6 +57,12 @@ def redirect_strip_matched_path(environ, start_response):
     return redirect(path, code=301)
 
 
+def status_endpoint(environ, start_response):
+    response = Response('{"status": "okay"}', status=200, mimetype="application/json")
+
+    return response(environ, start_response)
+
+
 def app(environ, start_response):
     embed_url = os.environ.get("H_EMBED_URL", "https://hypothes.is/embed.js")
 
@@ -85,6 +91,7 @@ application = wsgi.DispatcherMiddleware(
         "/static/__pywb": static.Cling(resource_filename("pywb", "static/")),
         "/static/__shared/viewer/web/viewer.html": redirect_old_viewer,
         "/h": redirect_strip_matched_path,
+        "/_status": status_endpoint,
     },
 )
 application = newrelic.agent.WSGIApplicationWrapper(application, name="proxy")
