@@ -9,7 +9,7 @@ argh==0.26.2              # via -r requirements/requirements.txt, watchdog
 atomicwrites==1.4.0       # via pytest
 attrs==20.3.0             # via -r requirements/requirements.txt, jsonschema, pytest
 backports.functools-lru-cache==1.6.1  # via wcwidth
-certifi==2019.3.9         # via -r requirements/requirements.txt, requests
+certifi==2019.3.9         # via -r requirements/requirements.txt, requests, sentry-sdk
 cffi==1.13.2              # via -r requirements/requirements.txt
 chardet==3.0.4            # via -r requirements/requirements.txt, pywb, requests
 configparser==4.0.2       # via -r requirements/requirements.txt, importlib-metadata
@@ -43,11 +43,12 @@ redis==3.2.1              # via -r requirements/requirements.txt, pywb
 requests-file==1.4.3      # via -r requirements/requirements.txt, tldextract
 requests==2.21.0          # via -r requirements/requirements.txt, h-checkmatelib, pywb, requests-file, tldextract
 scandir==1.10.0           # via -r requirements/requirements.txt, pathlib2
+sentry-sdk==1.0.0         # via -r requirements/requirements.txt
 six==1.12.0               # via -r requirements/requirements.txt, jsonschema, mock, more-itertools, packaging, pathlib2, pyrsistent, pytest, requests-file
 static==1.1.1             # via -r requirements/requirements.txt
 surt==0.2                 # via -r requirements/requirements.txt, pywb
 tldextract==2.2.1         # via -r requirements/requirements.txt, surt
-urllib3==1.24.2           # via -r requirements/requirements.txt, requests
+urllib3==1.24.2           # via -r requirements/requirements.txt, requests, sentry-sdk
 uwsgi==2.0.18             # via -r requirements/requirements.txt
 watchdog==0.9.0           # via -r requirements/requirements.txt, pywb
 wcwidth==0.2.5            # via pytest
