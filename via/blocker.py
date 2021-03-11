@@ -108,7 +108,7 @@ class Blocker(object):
             return self._checkmate.check_url(url, allow_all=allow_all)
 
         except CheckmateException as err:
-            LOG.warning(
+            LOG.exception(
                 "Failed to check url against checkmate with error: {}".format(err)
             )
             return None
