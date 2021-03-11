@@ -14,7 +14,7 @@ RUN apk add --update \
 
 # Install pip via get-pip.py as it is no longer packaged for Python 2 by Alpine.
 # pip is a runtime as well as build dependency because it includes `pkg_resources`.
-RUN curl https://bootstrap.pypa.io/2.7/get-pip.py -o get-pip.py && python get-pip.py
+RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py && python get-pip.py
 
 # Create the via user, group, home directory and package directory.
 RUN addgroup -S via && adduser -S -G via -h /var/lib/via via
